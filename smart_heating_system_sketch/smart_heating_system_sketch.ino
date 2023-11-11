@@ -43,13 +43,24 @@ const int mqtt_port = 1883;
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature senzor(&oneWire);
 
+
+/**
+ * @brief task functions prototypes
+ * 
+ */
+void mqtt_connection_monitoring_task(void *pv_params);
+void mqtt_publish_task(void *pv_params);
+void temperature_monitor_task(void *pv_params);
+void real_power_publish_task(void *pv_params);
+void ble_receive_task(void *pv_params);
+
 /**
  * @brief global objects and variables
  * 
  */
 sensor_data temp_sensor_one;
 
-sensor_data temp_sensor_second;
+sensor_data temp_sensor_two;
 
 sensor_data temp_sensor_xiaomi(24);
 
@@ -85,6 +96,7 @@ void setup_mqtt()
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);
 
+  //[To do] code duplicated with the function void reconnect()
   while (!client.connected()) 
   {
     String client_id = "esp32";
@@ -142,8 +154,30 @@ void setup()
   ble_init();
 
   //create tasks
+  if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",1024, NULL,4,NULL) != pdPASS)
+  {
+    Serial.println("Task creation failure: mqtt_monitoring_task");
+  }
 
+  if (xTaskCreate(mqtt_publish_task, "mqtt_publish_task",1024, NULL,4,NULL) != pdPASS)
+  {
+    Serial.println("Task creation failure: mqtt_publish_task");
+  }
 
+  if (xTaskCreate(temperature_monitor_task, "temp_monitoring_task",1024, NULL,4,NULL) != pdPASS)
+  {
+    Serial.println("Task creation failure: temperature_monitor_task");
+  }
+
+  if (xTaskCreate(real_power_publish_task, "power_publish_task",1024, NULL,4,NULL) != pdPASS)
+  {
+    Serial.println("Task creation failure: real_power_publish_task");
+  }
+
+  if (xTaskCreate(ble_receive_task, "ble_receive_task",1024, NULL,4,NULL) != pdPASS)
+  {
+    Serial.println("Task creation failure: ble_receive_task");
+  }
 
 }
 
@@ -193,9 +227,43 @@ void reconnect()
   Serial.println("client connection failed: reconnect()");
 }
 
+
+void mqtt_connection_monitoring_task(void *pv_params)
+{
+
+
+
+}
+
+void mqtt_publish_task(void *pv_params)
+{
+
+
+}
+
+void temperature_monitor_task(void *pv_params)
+{
+
+
+
+}
+
+void real_power_publish_task(void *pv_params)
+{
+
+
+}
+
+
+void ble_receive_task(void *pv_params)
+{
+
+  
+}
+
 void loop() 
 {
-  //goes inside a task
+  //task 1: monitor connection and loop mqtt connection
   if (!client.connected()) 
   {
     reconnect();
@@ -203,17 +271,19 @@ void loop()
 
   client.loop();
 
+  //task 2 get temperatures and error handling below
   senzor.requestTemperatures();
   temp_sensor_one.set_value(senzor.getTempCByIndex(0));
-  temp_sensor_second.set_value(senzor.getTempCByIndex(1));
+  temp_sensor_two.set_value(senzor.getTempCByIndex(1));
 
   //[To do] change this arrangement to use esp timers
+  //task 3 - add if (!client.connected())
   if ((millis() - timer2) > 3000) 
   {
 
     client.publish(topic, temp_sensor_one.get_string());
     delay(10);
-    client.publish(topic2, temp_sensor_second.get_string());
+    client.publish(topic2, temp_sensor_two.get_string());
     delay(10);
     client.publish(topic3, temp_sensor_xiaomi.get_string());
     delay(10);
@@ -221,6 +291,7 @@ void loop()
     timer2 = millis();
   }
 
+  //task 3
   if ((millis() - timer3) > 5000) 
   {        
     
@@ -242,10 +313,10 @@ void loop()
 
     client.publish(topic_stav, status_string);
   }
-  //[To do] timers uptill here
 
   //[To do] this is sometype of error handling
-  if (temp_sensor_second.get_value() > 43) 
+  // this also goes to task 2 get temperature
+  if (temp_sensor_two.get_value() > 43) 
   {
     heating_system_power.set_value(0);
     ledcWrite(0, heating_system_power.get_value());
@@ -262,6 +333,7 @@ void loop()
   }
 
   //[To do] another timer
+  //task 4
   if ((millis() - timer1) > 60000) 
   {
     // client.disconnect();
