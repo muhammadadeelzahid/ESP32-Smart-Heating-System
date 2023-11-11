@@ -163,7 +163,9 @@ void publish_reset_reason()
   cpu1_reset_reason.set_value(rtc_get_reset_reason(1));
   print_reset_reason(rtc_get_reset_reason(1));
 
+  char* empty_space = {" "};
   strcat(reset_reason_concatenated,cpu0_reset_reason.get_string());
+  strcat(reset_reason_concatenated,empty_space);
   strcat(reset_reason_concatenated,cpu1_reset_reason.get_string());
 
   if (!client.connected())
