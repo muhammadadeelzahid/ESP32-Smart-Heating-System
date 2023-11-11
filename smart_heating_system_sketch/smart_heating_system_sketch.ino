@@ -70,10 +70,6 @@ char status_string[8];
 
 int loop_count = 0;
 
-long timer1 = 0;
-long timer2 = 0;
-long timer3 = 0;
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -94,26 +90,10 @@ void setup_mqtt()
 
   // connecting to a mqtt broker
   client.setServer(mqtt_broker, mqtt_port);
-  client.setCallback(callback);
+  client.setCallback(heating_power_callback);
 
-  //[To do] code duplicated with the function void reconnect()
-  while (!client.connected()) 
-  {
-    String client_id = "esp32";
-    client_id += String(random(50000));
-    Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
-    if (client.connect(client_id.c_str(), mqtt_username, mqtt_password)) 
-    {
-      Serial.println("Public EMQX MQTT broker connected");
-    } 
-    else 
-    {
-      Serial.print("Error - setup_mqtt() failed with state ");
-      Serial.print(client.state());
-    }
-  }
-
-  client.subscribe(topic_vykon);  
+  //duplicate code was found here with reconnect() function
+  mqtt_connect();
 }
 
 void ble_init()
@@ -180,8 +160,12 @@ void setup()
   }
 
 }
+void loop() 
+{
+  vTaskDelay(pdMS_TO_TICKS(1000));
+}
 
-void callback(char *topic_vykon, byte *payload, unsigned int length) 
+void heating_power_callback(char *topic_vykon, byte *payload, unsigned int length) 
 {
 
   String message = "";
@@ -204,12 +188,11 @@ void callback(char *topic_vykon, byte *payload, unsigned int length)
   Serial.println("-----------------------");
 }
 
-void reconnect() 
+void mqtt_connect() 
 {
-  // Loop until we're reconnected
-  while (!client.connected()) 
+
+  if (!client.connected()) 
   {
-    delay(1000);
     String client_id = "esp32";
     client_id += String(random(50000));
     Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
@@ -223,81 +206,110 @@ void reconnect()
       Serial.print("failed with state ");
       Serial.println(client.state());
     }
+    Serial.println("Error: mqtt_connect - client connection failed");
   }
-  Serial.println("client connection failed: reconnect()");
 }
 
 
 void mqtt_connection_monitoring_task(void *pv_params)
 {
 
+  Serial.println("Task started: mqtt_connection_monitoring_task");
 
-
+  while(1)
+  {    
+    if (!client.connected()) 
+    {
+      mqtt_connect();
+    }
+    client.loop();
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
 }
 
 void mqtt_publish_task(void *pv_params)
 {
+  Serial.println("Task started: mqtt_publish_task");
 
+  while(1)
+  {
+    vTaskDelay(pdMS_TO_TICKS(3000));
+    
+    if (client.connected())
+    {
+      client.publish(topic, temp_sensor_one.get_string());
+      delay(10);
+      client.publish(topic2, temp_sensor_two.get_string());
+      delay(10);
+      client.publish(topic3, temp_sensor_xiaomi.get_string());
+      delay(10);
+    }
+    else
+    {
+      Serial.println("Error: mqtt_publish_task - client disconnected");
+    }
+
+  }
 
 }
 
 void temperature_monitor_task(void *pv_params)
 {
+  Serial.println("Task started: temperature_monitor_task");
 
+  while(1)
+  {
+    //task 2 get temperatures and error handling below
+    senzor.requestTemperatures();
+    temp_sensor_one.set_value(senzor.getTempCByIndex(0));
+    temp_sensor_two.set_value(senzor.getTempCByIndex(1));
+
+    //[To do] Improve this error handling
+    if (temp_sensor_two.get_value() > 43) 
+    {
+      heating_system_power.set_value(0);
+      ledcWrite(0, heating_system_power.get_value());
+      EEPROM.write(0, heating_system_power.get_value());
+      EEPROM.commit();
+
+      strcpy(status_string, "HAVARIE");
+
+      if (client.connected())
+      {
+        client.publish(topic_stav, status_string);
+      }
+      else
+      {
+        Serial.println("Error: temperature_monitor_task - mqtt connection failed");
+      }
+
+      //pause this task for 3 seconds
+      vTaskDelay(pdMS_TO_TICKS(3000));
+    }
+
+    vTaskDelay(pdMS_TO_TICKS(100));    
+  }
 
 
 }
 
 void real_power_publish_task(void *pv_params)
 {
+  Serial.println("Task started: real_power_publish_task");
 
-
-}
-
-
-void ble_receive_task(void *pv_params)
-{
-
-  
-}
-
-void loop() 
-{
-  //task 1: monitor connection and loop mqtt connection
-  if (!client.connected()) 
+  while(1)
   {
-    reconnect();
-  }
-
-  client.loop();
-
-  //task 2 get temperatures and error handling below
-  senzor.requestTemperatures();
-  temp_sensor_one.set_value(senzor.getTempCByIndex(0));
-  temp_sensor_two.set_value(senzor.getTempCByIndex(1));
-
-  //[To do] change this arrangement to use esp timers
-  //task 3 - add if (!client.connected())
-  if ((millis() - timer2) > 3000) 
-  {
-
-    client.publish(topic, temp_sensor_one.get_string());
-    delay(10);
-    client.publish(topic2, temp_sensor_two.get_string());
-    delay(10);
-    client.publish(topic3, temp_sensor_xiaomi.get_string());
-    delay(10);
-
-    timer2 = millis();
-  }
-
-  //task 3
-  if ((millis() - timer3) > 5000) 
-  {        
+    vTaskDelay(pdMS_TO_TICKS(5000));
     
-    client.publish(topic_skutecnyVykon, heating_system_power.get_value_percentage_string());
+    if (client.connected())
+    {
+      client.publish(topic_skutecnyVykon, heating_system_power.get_value_percentage_string());      
+    }
+    else
+    {
+      Serial.println("Error: real_power_publish_task - mqtt connection failed");
+    }
 
-    timer3 = millis();
 
     if (heating_system_power.get_value() > 0) 
     {
@@ -311,39 +323,29 @@ void loop()
       // status_string="NETOPIM";
     }
 
-    client.publish(topic_stav, status_string);
-  }
-
-  //[To do] this is sometype of error handling
-  // this also goes to task 2 get temperature
-  if (temp_sensor_two.get_value() > 43) 
-  {
-    heating_system_power.set_value(0);
-    ledcWrite(0, heating_system_power.get_value());
-    EEPROM.write(0, heating_system_power.get_value());
-    EEPROM.commit();
-
-    strcpy(status_string, "HAVARIE");
-    client.publish(topic_stav, status_string);
-
-    while (1) 
+    if (!client.connected())
     {
-      // INFINITE LOOP
+      client.publish(topic_stav, status_string);
     }
+    else
+    {
+      Serial.println("Error: real_power_publish_task - mqtt connection failed");
+    }
+  
   }
 
-  //[To do] another timer
-  //task 4
-  if ((millis() - timer1) > 60000) 
+}
+
+void ble_receive_task(void *pv_params)
+{
+  Serial.println("Task started: ble_receive_task");
+
+  while(1)
   {
-    // client.disconnect();
+    vTaskDelay(pdMS_TO_TICKS(60000));
+  
     BLEScanResults foundDevices = ble_scanner->start(5, false);
     ble_scanner->stop();
     ble_scanner->clearResults();
-    timer1 = millis();
-  }
-
-  Serial.print("Loop: ");
-  loop_count++;
-  Serial.println(loop_count);
+  }  
 }
