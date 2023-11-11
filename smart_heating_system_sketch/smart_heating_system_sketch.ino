@@ -67,7 +67,7 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 
 //Pointer to BLE scanner class
-BLEScan *sken;
+BLEScan *ble_scanner;
 
 void setup() 
 {
@@ -115,11 +115,11 @@ void setup()
   ledcWrite(0, heating_system_power.get_value());
 
   BLEDevice::init("");
-  sken = BLEDevice::getScan();
-  sken->setAdvertisedDeviceCallbacks(new ble_receive(), true);
-  sken->setInterval(625);
-  sken->setWindow(625);
-  sken->setActiveScan(true);
+  ble_scanner = BLEDevice::getScan();
+  ble_scanner->setAdvertisedDeviceCallbacks(new ble_receive(), true);
+  ble_scanner->setInterval(625);
+  ble_scanner->setWindow(625);
+  ble_scanner->setActiveScan(true);
 }
 
 void callback(char *topic_vykon, byte *payload, unsigned int length) 
@@ -239,9 +239,9 @@ void loop()
   if ((millis() - timer1) > 60000) 
   {
     // client.disconnect();
-    BLEScanResults foundDevices = sken->start(5, false);
-    sken->stop();
-    sken->clearResults();
+    BLEScanResults foundDevices = ble_scanner->start(5, false);
+    ble_scanner->stop();
+    ble_scanner->clearResults();
     timer1 = millis();
   }
 
