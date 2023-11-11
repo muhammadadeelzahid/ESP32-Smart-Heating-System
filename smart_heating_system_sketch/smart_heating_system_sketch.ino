@@ -20,7 +20,7 @@
 #include <BLEUtils.h>                                         // Support library for BLE
 #include <BLEScan.h>                                          // Library for BLE scan of nearby devices
 #include <BLEAdvertisedDevice.h>                              // Library for BLE advertising messages
-#include "value_string_pair.h"
+#include "sensor_data.h"
 #include "ble_receive.h"
 
 /**
@@ -47,13 +47,13 @@ DallasTemperature senzor(&oneWire);
  * @brief global objects and variables
  * 
  */
-value_string_pair temp_sensor_one;
+sensor_data temp_sensor_one;
 
-value_string_pair temp_sensor_second;
+sensor_data temp_sensor_second;
 
-value_string_pair temp_sensor_xiaomi(24);
+sensor_data temp_sensor_xiaomi(24);
 
-value_string_pair heating_system_power;
+sensor_data heating_system_power;
 
 char status_string[8];
 
@@ -69,17 +69,8 @@ PubSubClient client(espClient);
 //Pointer to BLE scanner class
 BLEScan *ble_scanner;
 
-void setup() 
+void setup_mqtt()
 {
-
-  Serial.begin(115200);
-  EEPROM.begin(EEPROM_SIZE);
-
-  pinMode(13, OUTPUT);
-  senzor.begin();
-
-  ledcSetup(0, 1000, 8);
-  ledcAttachPin(13, 0);
 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) 
@@ -89,6 +80,7 @@ void setup()
   }
 
   Serial.println("Connected to the Wi-Fi network");
+
   // connecting to a mqtt broker
   client.setServer(mqtt_broker, mqtt_port);
   client.setCallback(callback);
@@ -104,22 +96,55 @@ void setup()
     } 
     else 
     {
-      Serial.print("failed with state ");
+      Serial.print("Error - setup_mqtt() failed with state ");
       Serial.print(client.state());
     }
   }
 
-  client.subscribe(topic_vykon);
+  client.subscribe(topic_vykon);  
+}
 
-  heating_system_power.set_value(EEPROM.read(0));         // load last value from EEPROM
-  ledcWrite(0, heating_system_power.get_value());
-
+void ble_init()
+{
   BLEDevice::init("");
   ble_scanner = BLEDevice::getScan();
   ble_scanner->setAdvertisedDeviceCallbacks(new ble_receive(), true);
   ble_scanner->setInterval(625);
   ble_scanner->setWindow(625);
   ble_scanner->setActiveScan(true);
+}
+
+void heating_unit_init()
+{
+  EEPROM.begin(EEPROM_SIZE);
+
+  pinMode(13, OUTPUT);
+  senzor.begin();
+
+  ledcSetup(0, 1000, 8);
+  ledcAttachPin(13, 0);
+
+  heating_system_power.set_value(EEPROM.read(0));         // load last value from EEPROM
+  ledcWrite(0, heating_system_power.get_value());
+}
+
+void setup() 
+{
+
+  Serial.begin(115200);
+
+  heating_unit_init();
+
+  ///< connect to wifi
+  setup_mqtt();
+
+  //ble init
+  ble_init();
+
+  //create tasks
+
+
+
 }
 
 void callback(char *topic_vykon, byte *payload, unsigned int length) 
@@ -170,6 +195,7 @@ void reconnect()
 
 void loop() 
 {
+  //goes inside a task
   if (!client.connected()) 
   {
     reconnect();

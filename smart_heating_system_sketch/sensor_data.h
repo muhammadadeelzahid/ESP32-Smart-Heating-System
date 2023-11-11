@@ -1,5 +1,5 @@
 /**
- * @file value_string_pair.h
+ * @file sensor_data.h
  * @author Patrik Stransky
  * @author Adeel Zahid (adeel.m.zahid@gmail.com)
  * @brief include file for for ESP32 WIFI SCMI XIAOMI NodeRED project
@@ -19,10 +19,10 @@ using namespace std;
 #define             MQTT_VERSION        MQTT_VERSION_3_1
 
 /**
- * @brief class to store value of variable as well as corresponding string and easily convert between them
+ * @brief class to store value of sensor variable as well as corresponding string and easily convert between them
  * 
  */
-class value_string_pair 
+class sensor_data 
 {
     private:
         float value;
@@ -33,9 +33,9 @@ class value_string_pair
         void update_string_from_value();
     public:
         // Constructor
-        value_string_pair(float initial_value);
+        sensor_data(float initial_value);
 
-        value_string_pair();
+        sensor_data();
 
         // Getter for the 'value' member
         float get_value() const;

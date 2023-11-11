@@ -1,5 +1,5 @@
 /**
- * @file value_string_pair.cpp
+ * @file sensor_data.cpp
  * @author Adeel Zahid (adeel.m.zahid@gmail.com)
  * @brief implementation file for smart heating
  * @version 1.0
@@ -9,51 +9,51 @@
  * 
  */
 
-#include "value_string_pair.h"
+#include "sensor_data.h"
 
-void value_string_pair::update_string_from_value()
+void sensor_data::update_string_from_value()
 {
     std::sprintf(string, "%.1f", value);
 }
 
-value_string_pair::value_string_pair(float initial_value) 
+sensor_data::sensor_data(float initial_value) 
 {
     set_value(initial_value);
 }
 
-value_string_pair::value_string_pair() 
+sensor_data::sensor_data() 
 {
     set_value(0);
 }
 
 // Getter for the 'value' member
-float value_string_pair::get_value() const 
+float sensor_data::get_value() const 
 {
     return value;
 }
 
 // Setter for the 'value' member
-void value_string_pair::set_value(float new_value) 
+void sensor_data::set_value(float new_value) 
 {
     value = new_value;
     update_string_from_value();
 }
 
 // Getter for the 'string' member
-const char* value_string_pair::get_string() const 
+const char* sensor_data::get_string() const 
 {
     return string;
 }
 
 // Setter for the 'string' member
-void value_string_pair::set_string(const char* new_string) 
+void sensor_data::set_string(const char* new_string) 
 {
     std::strncpy(string, new_string, sizeof(string));
     string[sizeof(string) - 1] = '\0'; // Ensure null-termination
 }
 
 //function to convert value to anolge value percentage 0-255
-char* value_string_pair::get_value_percentage_string()
+char* sensor_data::get_value_percentage_string()
 {
     int value_int = int(value);
     switch (value_int) 
