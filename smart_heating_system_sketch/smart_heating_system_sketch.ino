@@ -21,6 +21,7 @@
 #include <BLEScan.h>                                          // Library for BLE scan of nearby devices
 #include <BLEAdvertisedDevice.h>                              // Library for BLE advertising messages
 #include "value_string_pair.h"
+#include "ble_receive.h"
 
 /**
  * @brief wifi credentials, set password to "" for open networks
@@ -54,76 +55,19 @@ value_string_pair temp_sensor_xiaomi(24);
 
 value_string_pair heating_system_power;
 
-long timer1 = 0;
-long timer2 = 0;
-long timer3 = 0;
 char status_string[8];
 
 int loop_count = 0;
 
+long timer1 = 0;
+long timer2 = 0;
+long timer3 = 0;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-// Ukazatel na tridu BLE skeneru
+//Pointer to BLE scanner class
 BLEScan *sken;
-
-// Vlastni odvolzena trida pro zpracovani advertizacni zpravy
-class NovaAdvertizacniData : public BLEAdvertisedDeviceCallbacks 
-{
-
-  // Privatni metoda tridy pro nalezeni dat sluzby v celkove zprave
-  uint8_t *najdiData(uint8_t *data, size_t length, uint8_t *delka) 
-  {
-    uint8_t *pravyOkraj = data + length;
-    while (data < pravyOkraj) 
-    {
-      uint8_t delkaBloku = *data + 1;
-      if (delkaBloku < 5) 
-      {
-        data += delkaBloku;
-        continue;
-      }
-      uint8_t typBloku = *(data + 1);
-      uint16_t typSluzby = *(uint16_t *)(data + 2);
-      // Pokud se jedna o korektni typ dat a tridu s UUID 0x181a,
-      // vrat data
-      if (typBloku == 0x16) 
-      {
-        if (typSluzby == 0x181a) 
-        {
-          *delka = delkaBloku;
-          return data;
-        }
-      }
-      data += delkaBloku;
-    }
-    
-    return nullptr;
-  }
-
-  // Zdedena metoda, ktera se zpracuje pri obdrzeni zpravy
-  void onResult(BLEAdvertisedDevice zarizeni) 
-  {
-    // Ziskej data
-    uint8_t *data = zarizeni.getPayload();
-    // Ziskej delku dat
-    size_t delkaDat = zarizeni.getPayloadLength();
-    uint8_t delkaDatSluzby = 0;
-    // Vytahni ze surove zpravy data sluzby, ktera obsahuji nami hledane udaje
-    uint8_t *dataSluzby = najdiData(data, delkaDat, &delkaDatSluzby);
-    if (data == nullptr || delkaDatSluzby < 18)
-    {
-      return;
-    }
-    // Pokud maji data sluzby delku 19 bajtu, je to to, co hledame
-    if (delkaDatSluzby > 18) 
-    {
-
-      temp_sensor_xiaomi.set_value(*(int16_t *)(data + 10) / 100.0);
-      // Za teplotou nasleduje 16bitove cele cislo bez znamenka s rel. vlhkosti v procentech a opet znasobene 100
-    }
-  }
-};
 
 void setup() 
 {
@@ -172,7 +116,7 @@ void setup()
 
   BLEDevice::init("");
   sken = BLEDevice::getScan();
-  sken->setAdvertisedDeviceCallbacks(new NovaAdvertizacniData(), true);
+  sken->setAdvertisedDeviceCallbacks(new ble_receive(), true);
   sken->setInterval(625);
   sken->setWindow(625);
   sken->setActiveScan(true);
@@ -237,6 +181,7 @@ void loop()
   temp_sensor_one.set_value(senzor.getTempCByIndex(0));
   temp_sensor_second.set_value(senzor.getTempCByIndex(1));
 
+  //[To do] change this arrangement to use esp timers
   if ((millis() - timer2) > 3000) 
   {
 
@@ -271,7 +216,9 @@ void loop()
 
     client.publish(topic_stav, status_string);
   }
+  //[To do] timers uptill here
 
+  //[To do] this is sometype of error handling
   if (temp_sensor_second.get_value() > 43) 
   {
     heating_system_power.set_value(0);
@@ -288,6 +235,7 @@ void loop()
     }
   }
 
+  //[To do] another timer
   if ((millis() - timer1) > 60000) 
   {
     // client.disconnect();
