@@ -22,6 +22,7 @@
 #include <BLEAdvertisedDevice.h>                              // Library for BLE advertising messages
 #include "sensor_data.h"
 #include "ble_receive.h"
+#include <rom/rtc.h>
 
 /**
  * @brief wifi credentials, set password to "" for open networks
@@ -35,6 +36,7 @@ const char *topic2 = "esp32/temp2";
 const char *topic3 = "esp32/temp3";
 const char *topic_vykon = "esp32/vykon";                    // topic for real_power power_value
 const char *topic_skutecnyVykon = "esp32/skutecnyVykon";
+const char *topic_reset_reason = "esp32/reset_reason";
 const char *topic_stav = "esp32/stav";
 const char *mqtt_username = "";
 const char *mqtt_password = "";
@@ -49,9 +51,13 @@ DallasTemperature senzor(&oneWire);
  * 
  */
 void mqtt_connection_monitoring_task(void *pv_params);
+
 void mqtt_publish_task(void *pv_params);
+
 void temperature_monitor_task(void *pv_params);
+
 void real_power_publish_task(void *pv_params);
+
 void ble_receive_task(void *pv_params);
 
 /**
@@ -66,9 +72,12 @@ sensor_data temp_sensor_xiaomi(24);
 
 sensor_data heating_system_power;
 
-char status_string[8];
+sensor_data cpu0_reset_reason;
 
-int loop_count = 0;
+sensor_data cpu1_reset_reason;
+
+char reset_reason_concatenated[20];
+char status_string[8];
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -120,6 +129,50 @@ void heating_unit_init()
   ledcWrite(0, heating_system_power.get_value());
 }
 
+void print_reset_reason(RESET_REASON reason)
+{
+  switch ( reason)
+  {
+    case 1 : Serial.println ("POWERON_RESET"); break;          /**<1, Vbat power on reset*/
+    case 3 : Serial.println ("SW_RESET"); break;               /**<3, Software reset digital core*/
+    case 4 : Serial.println ("OWDT_RESET"); break;             /**<4, Legacy watch dog reset digital core*/
+    case 5 : Serial.println ("DEEPSLEEP_RESET"); break;        /**<5, Deep Sleep reset digital core*/
+    case 6 : Serial.println ("SDIO_RESET"); break;             /**<6, Reset by SLC module, reset digital core*/
+    case 7 : Serial.println ("TG0WDT_SYS_RESET"); break;       /**<7, Timer Group0 Watch dog reset digital core*/
+    case 8 : Serial.println ("TG1WDT_SYS_RESET"); break;       /**<8, Timer Group1 Watch dog reset digital core*/
+    case 9 : Serial.println ("RTCWDT_SYS_RESET"); break;       /**<9, RTC Watch dog Reset digital core*/
+    case 10 : Serial.println ("INTRUSION_RESET"); break;       /**<10, Instrusion tested to reset CPU*/
+    case 11 : Serial.println ("TGWDT_CPU_RESET"); break;       /**<11, Time Group reset CPU*/
+    case 12 : Serial.println ("SW_CPU_RESET"); break;          /**<12, Software reset CPU*/
+    case 13 : Serial.println ("RTCWDT_CPU_RESET"); break;      /**<13, RTC Watch dog Reset CPU*/
+    case 14 : Serial.println ("EXT_CPU_RESET"); break;         /**<14, for APP CPU, reseted by PRO CPU*/
+    case 15 : Serial.println ("RTCWDT_BROWN_OUT_RESET"); break;/**<15, Reset when the vdd voltage is not stable*/
+    case 16 : Serial.println ("RTCWDT_RTC_RESET"); break;      /**<16, RTC Watch dog reset digital core and rtc module*/
+    default : Serial.println ("NO_MEAN");
+  }
+}
+
+void publish_reset_reason()
+{
+
+  Serial.println("CPU0 reset reason: ");
+  cpu0_reset_reason.set_value(rtc_get_reset_reason(0));
+  print_reset_reason(rtc_get_reset_reason(0));
+
+  Serial.println("CPU1 reset reason: ");
+  cpu1_reset_reason.set_value(rtc_get_reset_reason(1));
+  print_reset_reason(rtc_get_reset_reason(1));
+
+  strcat(reset_reason_concatenated,cpu0_reset_reason.get_string());
+  strcat(reset_reason_concatenated,cpu1_reset_reason.get_string());
+
+  if (!client.connected())
+  {
+    mqtt_connect();
+  }
+  client.publish(topic_reset_reason, reset_reason_concatenated);
+}
+
 void setup() 
 {
 
@@ -132,6 +185,8 @@ void setup()
 
   //ble init
   ble_init();
+
+  publish_reset_reason();
 
   //create tasks
   if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",1024, NULL,4,NULL) != pdPASS)

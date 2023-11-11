@@ -22,7 +22,7 @@
 class ble_receive : public BLEAdvertisedDeviceCallbacks
 {
 
-public:
+    public:
 
     /**
      * @brief Private method of the class to find the service data in the overall report
@@ -39,5 +39,4 @@ public:
      * @param zarizeni 
      */
     void onResult(BLEAdvertisedDevice zarizeni);
-
 };

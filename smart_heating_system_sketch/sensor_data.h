@@ -26,7 +26,7 @@ class sensor_data
 {
     private:
         float value;
-        char string[8];
+        char string[10];
         char percentage_string[10];
 
         // Function to update the 'string' member based on the 'value' member
