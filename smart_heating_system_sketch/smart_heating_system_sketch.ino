@@ -351,7 +351,6 @@ void temperature_monitor_task(void *pv_params)
     temp_sensor_one.set_value(senzor.getTempCByIndex(0));
     temp_sensor_two.set_value(senzor.getTempCByIndex(1));
 
-    //[To do] Improve this error handling
     if (temp_sensor_two.get_value() > 43) 
     {
       heating_system_power.set_value(0);
