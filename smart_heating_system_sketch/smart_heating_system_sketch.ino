@@ -34,9 +34,10 @@ const char *mqtt_broker = "192.168.88.88";
 const char *topic = "esp32/temp1";
 const char *topic2 = "esp32/temp2";
 const char *topic3 = "esp32/temp3";
-const char *topic_vykon = "esp32/vykon";                    // topic for real_power power_value
+const char *topic_vykon = "esp32/vykon";                      // topic for real_power power_value
 const char *topic_skutecnyVykon = "esp32/skutecnyVykon";
-const char *topic_reset_reason = "esp32/reset_reason";
+const char *topic_reset_reason = "esp32/reset_reason";        // topic for publish of reset reason  - publish reset reason
+const char *topic_reset_flag = "esp32/vykon";                 // topic for reset flag - receive reset command
 const char *topic_stav = "esp32/stav";
 const char *mqtt_username = "";
 const char *mqtt_password = "";
@@ -99,7 +100,7 @@ void setup_mqtt()
 
   // connecting to a mqtt broker
   client.setServer(mqtt_broker, mqtt_port);
-  client.setCallback(heating_power_callback);
+  client.setCallback(mqtt_subscribe_callback);
 
   //duplicate code was found here with reconnect() function
   mqtt_connect();
@@ -222,27 +223,55 @@ void loop()
   vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
-void heating_power_callback(char *topic_vykon, byte *payload, unsigned int length) 
+void mqtt_subscribe_callback(char *topic_name, byte *payload, unsigned int length) 
 {
 
   String message = "";
 
-  Serial.print("POWER:");
-
-  for (int i = 0; i < length; i++) 
+  if (strcmp(topic_name,topic_vykon) == 0)
   {
-    // Serial.print((char) payload[i]);
-    message += (char)payload[i];
+    Serial.print("POWER:");
+
+    for (int i = 0; i < length; i++) 
+    {
+      // Serial.print((char) payload[i]);
+      message += (char)payload[i];
+    }
+
+    heating_system_power.set_value(message.toInt());
+    ledcWrite(0, heating_system_power.get_value());
+
+    EEPROM.write(0, heating_system_power.get_value());
+    EEPROM.commit();
+
+    Serial.println(heating_system_power.get_value());
+    Serial.println("-----------------------");
+
   }
+  else if (strcmp(topic_name,topic_reset_flag) == 0)
+  {
+    // Handle the reset flag
+    message = "";
+    for (int i = 0; i < length; i++)
+    {
+      message += (char)payload[i];
+    }
 
-  heating_system_power.set_value(message.toInt());
-  ledcWrite(0, heating_system_power.get_value());
-
-  EEPROM.write(0, heating_system_power.get_value());
-  EEPROM.commit();
-
-  Serial.println(heating_system_power.get_value());
-  Serial.println("-----------------------");
+    // Check if the payload is "1" to trigger the reset
+    if (message == "1")
+    {
+      Serial.println("Resetting ESP32...");
+      esp_restart();
+    }
+    else
+    {
+      Serial.println("Error: mqtt_subscribe_callback - Invalid payload for topic reset_flag"); 
+    }  
+  }
+  else
+  {
+     Serial.println("Invalid topic data");
+  }
 }
 
 void mqtt_connect() 
@@ -257,6 +286,7 @@ void mqtt_connect()
     {
       Serial.println("Public EMQX MQTT broker connected");
       client.subscribe(topic_vykon);
+      client.subscribe(topic_reset_flag);
     } 
     else 
     {
