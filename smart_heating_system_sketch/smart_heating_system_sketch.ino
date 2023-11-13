@@ -1,6 +1,6 @@
 /**
- * @file smart_heating_system.ino
- * @author Patrik Stransky (@gmail.com)
+ * @file smart_floor_heating_system.ino
+ * @author Patrik Stransky
  * @author Adeel Zahid (adeel.m.zahid@gmail.com)
  * @brief main implementation file for smart heating system based on ESP32 WIFI SCMI XIAOMI NodeRED
  * @version 1.0
@@ -93,10 +93,10 @@ void setup_mqtt()
   while (WiFi.status() != WL_CONNECTED) 
   {
     delay(500);
-    Serial.println("Connecting to WiFi..");
+    Serial.println(F("Connecting to WiFi.."));
   }
 
-  Serial.println("Connected to the Wi-Fi network");
+  Serial.println(F("Connected to the Wi-Fi network"));
 
   // connecting to a mqtt broker
   client.setServer(mqtt_broker, mqtt_port);
@@ -134,33 +134,33 @@ void print_reset_reason(RESET_REASON reason)
 {
   switch ( reason)
   {
-    case 1 : Serial.println ("POWERON_RESET"); break;          /**<1, Vbat power on reset*/
-    case 3 : Serial.println ("SW_RESET"); break;               /**<3, Software reset digital core*/
-    case 4 : Serial.println ("OWDT_RESET"); break;             /**<4, Legacy watch dog reset digital core*/
-    case 5 : Serial.println ("DEEPSLEEP_RESET"); break;        /**<5, Deep Sleep reset digital core*/
-    case 6 : Serial.println ("SDIO_RESET"); break;             /**<6, Reset by SLC module, reset digital core*/
-    case 7 : Serial.println ("TG0WDT_SYS_RESET"); break;       /**<7, Timer Group0 Watch dog reset digital core*/
-    case 8 : Serial.println ("TG1WDT_SYS_RESET"); break;       /**<8, Timer Group1 Watch dog reset digital core*/
-    case 9 : Serial.println ("RTCWDT_SYS_RESET"); break;       /**<9, RTC Watch dog Reset digital core*/
-    case 10 : Serial.println ("INTRUSION_RESET"); break;       /**<10, Instrusion tested to reset CPU*/
-    case 11 : Serial.println ("TGWDT_CPU_RESET"); break;       /**<11, Time Group reset CPU*/
-    case 12 : Serial.println ("SW_CPU_RESET"); break;          /**<12, Software reset CPU*/
-    case 13 : Serial.println ("RTCWDT_CPU_RESET"); break;      /**<13, RTC Watch dog Reset CPU*/
-    case 14 : Serial.println ("EXT_CPU_RESET"); break;         /**<14, for APP CPU, reseted by PRO CPU*/
-    case 15 : Serial.println ("RTCWDT_BROWN_OUT_RESET"); break;/**<15, Reset when the vdd voltage is not stable*/
-    case 16 : Serial.println ("RTCWDT_RTC_RESET"); break;      /**<16, RTC Watch dog reset digital core and rtc module*/
-    default : Serial.println ("NO_MEAN");
+    case 1 : Serial.println (F("POWERON_RESET")); break;          /**<1, Vbat power on reset*/
+    case 3 : Serial.println (F("SW_RESET")); break;               /**<3, Software reset digital core*/
+    case 4 : Serial.println (F("OWDT_RESET")); break;             /**<4, Legacy watch dog reset digital core*/
+    case 5 : Serial.println (F("DEEPSLEEP_RESET")); break;        /**<5, Deep Sleep reset digital core*/
+    case 6 : Serial.println (F("SDIO_RESET")); break;             /**<6, Reset by SLC module, reset digital core*/
+    case 7 : Serial.println (F("TG0WDT_SYS_RESET")); break;       /**<7, Timer Group0 Watch dog reset digital core*/
+    case 8 : Serial.println (F("TG1WDT_SYS_RESET")); break;       /**<8, Timer Group1 Watch dog reset digital core*/
+    case 9 : Serial.println (F("RTCWDT_SYS_RESET")); break;       /**<9, RTC Watch dog Reset digital core*/
+    case 10 : Serial.println (F("INTRUSION_RESET")); break;       /**<10, Instrusion tested to reset CPU*/
+    case 11 : Serial.println (F("TGWDT_CPU_RESET")); break;       /**<11, Time Group reset CPU*/
+    case 12 : Serial.println (F("SW_CPU_RESET")); break;          /**<12, Software reset CPU*/
+    case 13 : Serial.println (F("RTCWDT_CPU_RESET")); break;      /**<13, RTC Watch dog Reset CPU*/
+    case 14 : Serial.println (F("EXT_CPU_RESET")); break;         /**<14, for APP CPU, reseted by PRO CPU*/
+    case 15 : Serial.println (F("RTCWDT_BROWN_OUT_RESET")); break;/**<15, Reset when the vdd voltage is not stable*/
+    case 16 : Serial.println (F("RTCWDT_RTC_RESET")); break;      /**<16, RTC Watch dog reset digital core and rtc module*/
+    default : Serial.println (F("NO_MEAN"));
   }
 }
 
 void publish_reset_reason()
 {
 
-  Serial.println("CPU0 reset reason: ");
+  Serial.println(F("CPU0 reset reason: "));
   cpu0_reset_reason.set_value(rtc_get_reset_reason(0));
   print_reset_reason(rtc_get_reset_reason(0));
 
-  Serial.println("CPU1 reset reason: ");
+  Serial.println(F("CPU1 reset reason: "));
   cpu1_reset_reason.set_value(rtc_get_reset_reason(1));
   print_reset_reason(rtc_get_reset_reason(1));
 
@@ -169,11 +169,14 @@ void publish_reset_reason()
   strcat(reset_reason_concatenated,empty_space);
   strcat(reset_reason_concatenated,cpu1_reset_reason.get_string());
 
-  if (!client.connected())
+  if (client.connected())
+  {
+    client.publish(topic_reset_reason, reset_reason_concatenated);   
+  }
+  else
   {
     mqtt_connect();
   }
-  client.publish(topic_reset_reason, reset_reason_concatenated);
 }
 
 void setup() 
@@ -192,29 +195,29 @@ void setup()
   publish_reset_reason();
 
   //create tasks
-  if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",1024, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",8192, NULL,4,NULL) != pdPASS)
   {
-    Serial.println("Task creation failure: mqtt_monitoring_task");
+    Serial.println(F("Task creation failure: mqtt_monitoring_task"));
   }
 
-  if (xTaskCreate(mqtt_publish_task, "mqtt_publish_task",1024, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(mqtt_publish_task, "mqtt_publish_task",8192, NULL,4,NULL) != pdPASS)
   {
-    Serial.println("Task creation failure: mqtt_publish_task");
+    Serial.println(F("Task creation failure: mqtt_publish_task"));
   }
 
-  if (xTaskCreate(temperature_monitor_task, "temp_monitoring_task",1024, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(temperature_monitor_task, "temp_monitoring_task",8192, NULL,4,NULL) != pdPASS)
   {
-    Serial.println("Task creation failure: temperature_monitor_task");
+    Serial.println(F("Task creation failure: temperature_monitor_task"));
   }
 
-  if (xTaskCreate(real_power_publish_task, "power_publish_task",1024, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(real_power_publish_task, "power_publish_task",8192, NULL,4,NULL) != pdPASS)
   {
-    Serial.println("Task creation failure: real_power_publish_task");
+    Serial.println(F("Task creation failure: real_power_publish_task"));
   }
 
-  if (xTaskCreate(ble_receive_task, "ble_receive_task",1024, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(ble_receive_task, "ble_receive_task",8192, NULL,4,NULL) != pdPASS)
   {
-    Serial.println("Task creation failure: ble_receive_task");
+    Serial.println(F("Task creation failure: ble_receive_task"));
   }
 
 }
@@ -230,7 +233,7 @@ void mqtt_subscribe_callback(char *topic_name, byte *payload, unsigned int lengt
 
   if (strcmp(topic_name,topic_vykon) == 0)
   {
-    Serial.print("POWER:");
+    Serial.print(F("POWER:"));
 
     for (int i = 0; i < length; i++) 
     {
@@ -245,7 +248,7 @@ void mqtt_subscribe_callback(char *topic_name, byte *payload, unsigned int lengt
     EEPROM.commit();
 
     Serial.println(heating_system_power.get_value());
-    Serial.println("-----------------------");
+    Serial.println(F("-----------------------"));
 
   }
   else if (strcmp(topic_name,topic_reset_flag) == 0)
@@ -260,17 +263,17 @@ void mqtt_subscribe_callback(char *topic_name, byte *payload, unsigned int lengt
     // Check if the payload is "1" to trigger the reset
     if (message == "1")
     {
-      Serial.println("Resetting ESP32...");
+      Serial.println(F("Resetting ESP32..."));
       esp_restart();
     }
     else
     {
-      Serial.println("Error: mqtt_subscribe_callback - Invalid payload for topic reset_flag"); 
+      Serial.println(F("Error: mqtt_subscribe_callback - Invalid payload for topic reset_flag")); 
     }  
   }
   else
   {
-     Serial.println("Invalid topic data");
+     Serial.println(F("Invalid topic data"));
   }
 }
 
@@ -281,19 +284,19 @@ void mqtt_connect()
   {
     String client_id = "esp32";
     client_id += String(random(50000));
-    Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
+    Serial.printf("Client [%s] Attempting to connect to the public MQTT broker\n", client_id.c_str());
     if (client.connect(client_id.c_str(), mqtt_username, mqtt_password)) 
     {
-      Serial.println("Public EMQX MQTT broker connected");
+      Serial.println(F("Public EMQX MQTT broker connected"));
       client.subscribe(topic_vykon);
       client.subscribe(topic_reset_flag);
     } 
     else 
     {
-      Serial.print("failed with state ");
+      Serial.print(F("failed with state: "));
       Serial.println(client.state());
     }
-    Serial.println("Error: mqtt_connect - client connection failed");
+    Serial.println(F("Error: mqtt_connect - client connection failed"));
   }
 }
 
@@ -301,7 +304,7 @@ void mqtt_connect()
 void mqtt_connection_monitoring_task(void *pv_params)
 {
 
-  Serial.println("Task started: mqtt_connection_monitoring_task");
+  Serial.println(F("Task started: mqtt_connection_monitoring_task"));
 
   while(1)
   {    
@@ -316,7 +319,7 @@ void mqtt_connection_monitoring_task(void *pv_params)
 
 void mqtt_publish_task(void *pv_params)
 {
-  Serial.println("Task started: mqtt_publish_task");
+  Serial.println(F("Task started: mqtt_publish_task"));
 
   while(1)
   {
@@ -333,7 +336,7 @@ void mqtt_publish_task(void *pv_params)
     }
     else
     {
-      Serial.println("Error: mqtt_publish_task - client disconnected");
+      Serial.println(F("Error: mqtt_publish_task - client disconnected"));
     }
 
   }
@@ -342,7 +345,7 @@ void mqtt_publish_task(void *pv_params)
 
 void temperature_monitor_task(void *pv_params)
 {
-  Serial.println("Task started: temperature_monitor_task");
+  Serial.println(F("Task started: temperature_monitor_task"));
 
   while(1)
   {
@@ -366,7 +369,7 @@ void temperature_monitor_task(void *pv_params)
       }
       else
       {
-        Serial.println("Error: temperature_monitor_task - mqtt connection failed");
+        Serial.println(F("Error: temperature_monitor_task - mqtt connection failed"));
       }
 
       //pause this task for 3 seconds
@@ -381,7 +384,7 @@ void temperature_monitor_task(void *pv_params)
 
 void real_power_publish_task(void *pv_params)
 {
-  Serial.println("Task started: real_power_publish_task");
+  Serial.println(F("Task started: real_power_publish_task"));
 
   while(1)
   {
@@ -393,7 +396,7 @@ void real_power_publish_task(void *pv_params)
     }
     else
     {
-      Serial.println("Error: real_power_publish_task - mqtt connection failed");
+      Serial.println(F("Error: real_power_publish_task - mqtt connection failed"));
     }
 
 
@@ -409,13 +412,13 @@ void real_power_publish_task(void *pv_params)
       // status_string="NETOPIM";
     }
 
-    if (!client.connected())
+    if (client.connected())
     {
       client.publish(topic_stav, status_string);
     }
     else
     {
-      Serial.println("Error: real_power_publish_task - mqtt connection failed");
+      Serial.println(F("Error: real_power_publish_task - mqtt connection failed"));
     }
   
   }
@@ -424,7 +427,7 @@ void real_power_publish_task(void *pv_params)
 
 void ble_receive_task(void *pv_params)
 {
-  Serial.println("Task started: ble_receive_task");
+  Serial.println(F("Task started: ble_receive_task"));
 
   while(1)
   {
