@@ -1,5 +1,6 @@
 /**
  * @file sensor_data.cpp
+ * @author Patrik Stransky
  * @author Adeel Zahid (adeel.m.zahid@gmail.com)
  * @brief implementation file for smart heating
  * @version 1.0

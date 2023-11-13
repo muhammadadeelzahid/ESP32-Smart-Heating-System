@@ -1,6 +1,6 @@
 /**
  * @file ble_receive.cpp
- * @author Patrik Stransky (@gmail.com)
+ * @author Patrik Stransky
  * @author Adeel Zahid (adeel.m.zahid@gmail.com)
  * @brief class definition for ble data receiving for xiaomi sensor
  * @version 1.0
