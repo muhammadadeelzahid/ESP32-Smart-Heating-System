@@ -23,24 +23,25 @@
 #include "sensor_data.h"
 #include "ble_receive.h"
 #include <rom/rtc.h>
+#include <pgmspace.h>
 
 /**
  * @brief wifi credentials, set password to "" for open networks
  * 
  */
-const char *ssid = "FreeWifi";
-const char *password = "banannaopici";
-const char *mqtt_broker = "192.168.88.88";
-const char *topic = "esp32/temp1";
-const char *topic2 = "esp32/temp2";
-const char *topic3 = "esp32/temp3";
-const char *topic_vykon = "esp32/vykon";                      // topic for real_power power_value
-const char *topic_skutecnyVykon = "esp32/skutecnyVykon";
-const char *topic_reset_reason = "esp32/reset_reason";        // topic for publish of reset reason  - publish reset reason
-const char *topic_reset_flag = "esp32/remote_reset";          // topic for reset flag - receive reset command
-const char *topic_stav = "esp32/stav";
-const char *mqtt_username = "";
-const char *mqtt_password = "";
+const PROGMEM char *ssid = "FreeWifi";
+const PROGMEM char *password = "banannaopici";
+const PROGMEM char *mqtt_broker = "192.168.88.88";
+const PROGMEM char *topic = "esp32/temp1";
+const PROGMEM char *topic2 = "esp32/temp2";
+const PROGMEM char *topic3 = "esp32/temp3";
+const PROGMEM char *topic_vykon = "esp32/vykon";                      // topic for real_power power_value
+const PROGMEM char *topic_skutecnyVykon = "esp32/skutecnyVykon";
+const PROGMEM char *topic_reset_reason = "esp32/reset_reason";        // topic for publish of reset reason  - publish reset reason
+const PROGMEM char *topic_reset_flag = "esp32/remote_reset";          // topic for reset flag - receive reset command
+const PROGMEM char *topic_stav = "esp32/stav";
+const PROGMEM char *mqtt_username = "";
+const PROGMEM char *mqtt_password = "";
 const int mqtt_port = 1883;
 
 OneWire oneWire(ONE_WIRE_BUS);
@@ -92,7 +93,8 @@ void setup_mqtt()
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) 
   {
-    delay(500);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
     Serial.println(F("Connecting to WiFi.."));
   }
 
@@ -328,11 +330,11 @@ void mqtt_publish_task(void *pv_params)
     if (client.connected())
     {
       client.publish(topic, temp_sensor_one.get_string());
-      delay(10);
+      vTaskDelay(pdMS_TO_TICKS(10));
       client.publish(topic2, temp_sensor_two.get_string());
-      delay(10);
+      vTaskDelay(pdMS_TO_TICKS(10));
       client.publish(topic3, temp_sensor_xiaomi.get_string());
-      delay(10);
+      vTaskDelay(pdMS_TO_TICKS(10));
     }
     else
     {
@@ -392,7 +394,9 @@ void real_power_publish_task(void *pv_params)
     
     if (client.connected())
     {
-      client.publish(topic_skutecnyVykon, heating_system_power.get_value_percentage_string());      
+      client.publish(topic_skutecnyVykon, heating_system_power.get_value_percentage_string());  
+      vTaskDelay(pdMS_TO_TICKS(100));
+    
     }
     else
     {

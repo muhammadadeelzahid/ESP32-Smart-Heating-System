@@ -80,4 +80,5 @@ char* sensor_data::get_value_percentage_string()
       default:
         break;
     }
+    return percentage_string;
 }

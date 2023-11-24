@@ -12,6 +12,7 @@
 
 #include "ble_receive.h"
 #include "sensor_data.h"
+#include "Arduino.h"
 
 extern sensor_data temp_sensor_xiaomi;
 /**
@@ -24,6 +25,7 @@ extern sensor_data temp_sensor_xiaomi;
 uint8_t* ble_receive::najdiData(uint8_t *data, size_t length, uint8_t *delka)
 {
     uint8_t *pravyOkraj = data + length;
+    Serial.println("service data function");
     while (data < pravyOkraj) 
     {
       uint8_t delkaBloku = *data + 1;
@@ -45,6 +47,9 @@ uint8_t* ble_receive::najdiData(uint8_t *data, size_t length, uint8_t *delka)
         }
       }
       data += delkaBloku;
+      Serial.print("service data, while iteration - "); 
+      Serial.print("*data: "); Serial.print(*data);
+      Serial.print("*pravyOkraj: "); Serial.print(*pravyOkraj);
     }
     
     return nullptr;
@@ -75,4 +80,5 @@ void ble_receive::onResult(BLEAdvertisedDevice zarizeni)
       temp_sensor_xiaomi.set_value(*(int16_t *)(data + 10) / 100.0);
       // Za teplotou nasleduje 16bitove cele cislo bez znamenka s rel. vlhkosti v procentech a opet znasobene 100
     }
+    Serial.println("BLE data received");
 }
