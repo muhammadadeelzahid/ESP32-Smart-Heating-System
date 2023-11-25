@@ -197,27 +197,27 @@ void setup()
   publish_reset_reason();
 
   //create tasks
-  if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",8192, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(mqtt_connection_monitoring_task, "mqtt_monitoring_task",8192, NULL,5,NULL) != pdPASS)
   {
     Serial.println(F("Task creation failure: mqtt_monitoring_task"));
   }
 
-  if (xTaskCreate(mqtt_publish_task, "mqtt_publish_task",8192, NULL,4,NULL) != pdPASS)
-  {
-    Serial.println(F("Task creation failure: mqtt_publish_task"));
-  }
-
-  if (xTaskCreate(temperature_monitor_task, "temp_monitoring_task",8192, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(temperature_monitor_task, "temp_monitoring_task",8192, NULL,5,NULL) != pdPASS)
   {
     Serial.println(F("Task creation failure: temperature_monitor_task"));
   }
 
-  if (xTaskCreate(real_power_publish_task, "power_publish_task",8192, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(mqtt_publish_task, "mqtt_publish_task",8192, NULL,5,NULL) != pdPASS)
+  {
+    Serial.println(F("Task creation failure: mqtt_publish_task"));
+  }
+
+  if (xTaskCreate(real_power_publish_task, "power_publish_task",8192, NULL,5,NULL) != pdPASS)
   {
     Serial.println(F("Task creation failure: real_power_publish_task"));
   }
 
-  if (xTaskCreate(ble_receive_task, "ble_receive_task",8192, NULL,4,NULL) != pdPASS)
+  if (xTaskCreate(ble_receive_task, "ble_receive_task",8192, NULL,5,NULL) != pdPASS)
   {
     Serial.println(F("Task creation failure: ble_receive_task"));
   }
@@ -315,7 +315,7 @@ void mqtt_connection_monitoring_task(void *pv_params)
       mqtt_connect();
     }
     client.loop();
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
 

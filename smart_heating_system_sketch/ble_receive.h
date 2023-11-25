@@ -31,12 +31,12 @@ class ble_receive : public BLEAdvertisedDeviceCallbacks
      * @param delka 
      * @return *ptr 
      */
-    uint8_t* najdiData(uint8_t *data, size_t length, uint8_t *delka);
+    uint8_t* find_data(uint8_t *data, size_t length, uint8_t *delka);
 
     /**
      * @brief Inherited method that will be processed when the message is received
      * 
-     * @param zarizeni 
+     * @param device 
      */
-    void onResult(BLEAdvertisedDevice zarizeni);
+    void onResult(BLEAdvertisedDevice device);
 };

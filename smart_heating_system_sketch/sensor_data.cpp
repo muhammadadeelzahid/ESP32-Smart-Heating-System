@@ -36,7 +36,14 @@ float sensor_data::get_value() const
 // Setter for the 'value' member
 void sensor_data::set_value(float new_value) 
 {
-    value = new_value;
+    if (new_value >-75 && new_value <150)
+    {
+      value = new_value;
+    }
+    else
+    {
+      value = 0;
+    }
     update_string_from_value();
 }
 
