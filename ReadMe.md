@@ -9,7 +9,6 @@ Here’s a directory structure diagram for the project:
 ```python
 Smart-Heating-System/
 ├── README.md
-├── LICENSE
 ├── ble_receive.h
 ├── ble_receive.cpp
 ├── sensor_data.h
