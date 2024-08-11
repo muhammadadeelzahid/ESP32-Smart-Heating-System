@@ -7,7 +7,7 @@ This repository contains the code for a smart floor heating system based on ESP3
 Here’s a directory structure diagram for the project:
 
 ```python
-Smart-Heating-System/
+Smart-Heating-System
 ├── README.md
 ├── ble_receive.h
 ├── ble_receive.cpp
